@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::env;
 use std::fmt::{self, Display};
 use std::io;
@@ -25,7 +24,7 @@ pub enum OverrideReason {
 }
 
 impl Display for OverrideReason {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::result::Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Environment => write!(f, "environment override by RUSTUP_TOOLCHAIN"),
             Self::CommandLine => write!(f, "overridden by +toolchain on the command line"),
@@ -161,22 +160,17 @@ impl Cfg {
         })?;
 
         // Environment override
-        let env_override = env::var("RUSTUP_TOOLCHAIN")
-            .ok()
-            .and_then(utils::if_not_empty);
+        let env_override = env::var("RUSTUP_TOOLCHAIN").ok().filter(|p| !p.is_empty());
 
-        let dist_root_server = match env::var("RUSTUP_DIST_SERVER") {
-            Ok(ref s) if !s.is_empty() => s.clone(),
-            _ => {
-                // For backward compatibility
-                env::var("RUSTUP_DIST_ROOT")
-                    .ok()
-                    .and_then(utils::if_not_empty)
-                    .map_or(Cow::Borrowed(dist::DEFAULT_DIST_ROOT), Cow::Owned)
-                    .as_ref()
-                    .trim_end_matches("/dist")
-                    .to_owned()
-            }
+        let dist_server = env::var("RUSTUP_DIST_SERVER")
+            .ok()
+            .filter(|p| !p.is_empty());
+        let dist_root_server = match dist_server {
+            Some(s) => s,
+            None => match env::var("DEFAULT_DIST_ROOT").ok().filter(|p| !p.is_empty()) {
+                Some(s) => s.trim_end_matches("/dist").to_string(),
+                None => dist::DEFAULT_DIST_SERVER.to_string(),
+            },
         };
 
         let notify_clone = notify_handler.clone();

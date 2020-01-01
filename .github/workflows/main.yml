@@ -1,0 +1,68 @@
+name: CI
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the master branch
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [linux, macos, windows]
+        include:
+          - build: linux
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - build: macos
+            os: macos-latest
+            target: x86_64-apple-darwin
+          - build: windows
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v1
+      - name: Cache CARGO_HOME
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-home
+      - name: Cache CARGO_TARGET_DIR
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-target-
+      - name: Install Rust
+        shell: bash
+        run: |
+          sh ./rustup-init.sh -y --default-toolchain=none --profile=minimal
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustup override set beta
+          # FIXME: Do not update it unless we want Rust newer features
+          # $HOME/.cargo/bin/rustup update --no-self-update stable
+          echo "##[add-path]$HOME/.cargo/bin"
+      - name: Build and test
+        env:
+          TARGET: ${{ matrix.target }}
+          CARGO_INCREMENTAL: 0
+        shell: bash
+        run: |
+          # bash ci/run.bash
+          cargo build --locked --release --target "$TARGET" "${FEATURES[@]}"
+          cargo test --no-run --locked --release --target "$TARGET" "${FEATURES[@]}"
+          CARGO_HOME="$PWD/home" RUSTUP_HOME="$PWD/home" \
+          target/"$TARGET"/release/rustup-init"${EXE_SUFFIX}" -y --default-toolchain=none --profile=minimal
+      - name: Clean up cache
+        shell: bash
+        run: |
+          cargo +beta install --debug --no-default-features \
+            --features ci-autoclean --bin cargo-cache \
+            --git https://github.com/matthiaskrgr/cargo-cache -- cargo-cache
+          cargo cache

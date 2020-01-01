@@ -63,7 +63,7 @@ pub const NEVER_SELF_UPDATE: bool = false;
 // argument of format! needs to be a literal.
 
 macro_rules! pre_install_msg_template {
-    ($platform_msg: expr) => {
+    ($platform_msg:literal) => {
         concat!(
             r"
 # Welcome to Rust!
@@ -215,18 +215,19 @@ static UPDATE_ROOT: &str = "https://static.rust-lang.org/rustup";
 /// substituted for the directory prefix
 fn canonical_cargo_home() -> Result<String> {
     let path = utils::cargo_home()?;
-    let mut path_str = path.to_string_lossy().to_string();
 
     let default_cargo_home = utils::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join(".cargo");
-    if default_cargo_home == path {
+    let path_str = if default_cargo_home == path {
         if cfg!(unix) {
-            path_str = String::from("$HOME/.cargo");
+            String::from("$HOME/.cargo")
         } else {
-            path_str = String::from(r"%USERPROFILE%\.cargo");
+            String::from(r"%USERPROFILE%\.cargo")
         }
-    }
+    } else {
+        path.display().to_string()
+    };
 
     Ok(path_str)
 }
@@ -238,6 +239,7 @@ pub fn install(no_prompt: bool, verbose: bool, quiet: bool, mut opts: InstallOpt
     do_pre_install_sanity_checks()?;
     do_pre_install_options_sanity_checks(&opts)?;
     check_existence_of_rustc_or_cargo_in_path(no_prompt)?;
+    #[cfg(unix)]
     do_anti_sudo_check(no_prompt)?;
 
     let mut term = term2::stdout();
@@ -317,22 +319,19 @@ pub fn install(no_prompt: bool, verbose: bool, quiet: bool, mut opts: InstallOpt
     }
 
     let cargo_home = canonical_cargo_home()?;
-    let msg = if !opts.no_modify_path {
-        if cfg!(unix) {
-            format!(post_install_msg_unix!(), cargo_home = cargo_home)
-        } else {
-            format!(post_install_msg_win!(), cargo_home = cargo_home)
-        }
-    } else if cfg!(unix) {
-        format!(
+    #[cfg(windows)]
+    let cargo_home = cargo_home.replace('\\', r"\\");
+    let msg = match (opts.no_modify_path, cfg!(unix)) {
+        (false, true) => format!(post_install_msg_unix!(), cargo_home = cargo_home),
+        (false, false) => format!(post_install_msg_win!(), cargo_home = cargo_home),
+        (true, true) => format!(
             post_install_msg_unix_no_modify_path!(),
             cargo_home = cargo_home
-        )
-    } else {
-        format!(
+        ),
+        (true, false) => format!(
             post_install_msg_win_no_modify_path!(),
             cargo_home = cargo_home
-        )
+        ),
     };
     md(&mut term, msg);
 
@@ -398,11 +397,11 @@ fn check_existence_of_rustc_or_cargo_in_path(no_prompt: bool) -> Result<()> {
 fn do_pre_install_sanity_checks() -> Result<()> {
     let rustc_manifest_path = PathBuf::from("/usr/local/lib/rustlib/manifest-rustc");
     let uninstaller_path = PathBuf::from("/usr/local/lib/rustlib/uninstall.sh");
-    let rustup_sh_path = utils::home_dir().map(|d| d.join(".rustup"));
-    let rustup_sh_version_path = rustup_sh_path.as_ref().map(|p| p.join("rustup-version"));
+    let rustup_sh_path = utils::home_dir().unwrap().join(".rustup");
+    let rustup_sh_version_path = rustup_sh_path.join("rustup-version");
 
     let rustc_exists = rustc_manifest_path.exists() && uninstaller_path.exists();
-    let rustup_sh_exists = rustup_sh_version_path.map(|p| p.exists()) == Some(true);
+    let rustup_sh_exists = rustup_sh_version_path.exists();
 
     if rustc_exists {
         warn!("it looks like you have an existing installation of Rust");
@@ -417,10 +416,7 @@ fn do_pre_install_sanity_checks() -> Result<()> {
     if rustup_sh_exists {
         warn!("it looks like you have existing rustup.sh metadata");
         warn!("rustup cannot be installed while rustup.sh metadata exists");
-        warn!(
-            "delete `{}` to remove rustup.sh",
-            rustup_sh_path.unwrap().display()
-        );
+        warn!("delete `{}` to remove rustup.sh", rustup_sh_path.display());
         warn!("or, if you already have rustup installed, you can run");
         warn!("`rustup self update` and `rustup toolchain list` to upgrade");
         warn!("your directory structure");
@@ -467,63 +463,33 @@ fn do_pre_install_options_sanity_checks(opts: &InstallOpts) -> Result<()> {
 // If the user is trying to install with sudo, on some systems this will
 // result in writing root-owned files to the user's home directory, because
 // sudo is configured not to change $HOME. Don't let that bogosity happen.
-#[allow(dead_code)]
+#[cfg(unix)]
 fn do_anti_sudo_check(no_prompt: bool) -> Result<()> {
-    use std::ffi::OsString;
-
-    #[cfg(unix)]
-    pub fn home_mismatch() -> (bool, OsString, String) {
-        use std::ffi::CStr;
-        use std::mem::MaybeUninit;
-        use std::ptr;
-
+    pub fn home_mismatch() -> (bool, PathBuf, PathBuf) {
+        let fallback = || (false, PathBuf::new(), PathBuf::new());
         // test runner should set this, nothing else
-        if let Ok(true) = env::var("RUSTUP_INIT_SKIP_SUDO_CHECK").map(|s| s == "yes") {
-            return (false, OsString::new(), String::new());
+        if env::var_os("RUSTUP_INIT_SKIP_SUDO_CHECK").map_or(false, |s| s == "yes") {
+            return fallback();
         }
-        let mut buf = [0u8; 1024];
-        let mut pwd = MaybeUninit::<libc::passwd>::uninit();
-        let mut pwdp: *mut libc::passwd = ptr::null_mut();
-        let rv = unsafe {
-            libc::getpwuid_r(
-                libc::geteuid(),
-                pwd.as_mut_ptr(),
-                buf.as_mut_ptr().cast::<libc::c_char>(),
-                buf.len(),
-                (&mut pwdp) as *mut *mut libc::passwd,
-            )
-        };
-        if rv != 0 || pwdp.is_null() {
-            warn!("getpwuid_r: couldn't get user data");
-            return (false, OsString::new(), String::new());
+
+        match (utils::home_dir_from_passwd(), env::var_os("HOME")) {
+            (Some(pw), Some(eh)) if eh != pw => return (true, PathBuf::from(eh), pw),
+            (None, _) => warn!("getpwuid_r: couldn't get user data"),
+            _ => {}
         }
-        let pwd = unsafe { pwd.assume_init() };
-        let pw_dir = unsafe { CStr::from_ptr(pwd.pw_dir) }.to_str().ok();
-        let env_home = env::var_os("HOME");
-        match (env_home, pw_dir) {
-            (None, _) | (_, None) => (false, OsString::new(), String::new()),
-            (Some(eh), Some(pd)) => (eh != pd, eh, String::from(pd)),
-        }
+        fallback()
     }
 
-    #[cfg(not(unix))]
-    pub fn home_mismatch() -> (bool, OsString, String) {
-        (false, OsString::new(), String::new())
-    }
-
-    match (home_mismatch(), no_prompt) {
-        ((false, _, _), _) => (),
-        ((true, env_home, euid_home), false) => {
+    match home_mismatch() {
+        (false, _, _) => {}
+        (true, env_home, euid_home) => {
             err!("$HOME differs from euid-obtained home directory: you may be using sudo");
-            err!("$HOME directory: {:?}", env_home);
-            err!("euid-obtained home directory: {}", euid_home);
-            err!("if this is what you want, restart the installation with `-y'");
-            process::exit(1);
-        }
-        ((true, env_home, euid_home), true) => {
-            warn!("$HOME differs from euid-obtained home directory: you may be using sudo");
-            warn!("$HOME directory: {:?}", env_home);
-            warn!("euid-obtained home directory: {}", euid_home);
+            err!("$HOME directory: {}", env_home.display());
+            err!("euid-obtained home directory: {}", euid_home.display());
+            if !no_prompt {
+                err!("if this is what you want, restart the installation with `-y'");
+                process::exit(1);
+            }
         }
     }
 
@@ -535,18 +501,17 @@ fn do_anti_sudo_check(no_prompt: bool) -> Result<()> {
 #[cfg(windows)]
 fn do_msvc_check(opts: &InstallOpts) -> Result<bool> {
     // Test suite skips this since it's env dependent
-    if env::var("RUSTUP_INIT_SKIP_MSVC_CHECK").is_ok() {
+    if env::var_os("RUSTUP_INIT_SKIP_MSVC_CHECK").is_some() {
         return Ok(true);
     }
 
     use cc::windows_registry;
-    let host_triple = if let Some(trip) = opts.default_host_triple.as_ref() {
-        trip.to_owned()
-    } else {
-        TargetTriple::from_host_or_build().to_string()
-    };
+    let host_triple = opts
+        .default_host_triple
+        .as_deref()
+        .or_else(|| TargetTriple::from_host_or_build().0.as_str());
     let installing_msvc = host_triple.contains("msvc");
-    let have_msvc = windows_registry::find_tool(&host_triple, "cl.exe").is_some();
+    let have_msvc = windows_registry::find_tool(host_triple, "cl.exe").is_some();
     if installing_msvc && !have_msvc {
         return Ok(false);
     }
@@ -740,7 +705,7 @@ pub fn install_proxies() -> Result<()> {
             if tool_handles.iter().all(|h| *h != handle) {
                 warn!("tool `{}` is already installed, remove it from `{}`, then run `rustup update` \
                        to have rustup manage this tool.",
-                      tool, bin_path.to_string_lossy());
+                      tool, bin_path.display());
                 continue;
             }
         }
@@ -926,8 +891,18 @@ fn delete_rustup_and_cargo_home() -> Result<()> {
 // https://stackoverflow.com/questions/10319526/understanding-a-self-deleting-program-in-c
 #[cfg(windows)]
 fn delete_rustup_and_cargo_home() -> Result<()> {
+    use std::io;
+    use std::mem;
+    use std::os::windows::ffi::OsStrExt;
+    use std::ptr;
     use std::thread;
     use std::time::Duration;
+    use winapi::shared::minwindef::DWORD;
+    use winapi::um::fileapi::{CreateFileW, OPEN_EXISTING};
+    use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
+    use winapi::um::minwinbase::SECURITY_ATTRIBUTES;
+    use winapi::um::winbase::FILE_FLAG_DELETE_ON_CLOSE;
+    use winapi::um::winnt::{FILE_SHARE_DELETE, FILE_SHARE_READ, GENERIC_READ};
 
     // CARGO_HOME, hopefully empty except for bin/rustup.exe
     let cargo_home = utils::cargo_home()?;
@@ -944,31 +919,21 @@ fn delete_rustup_and_cargo_home() -> Result<()> {
     let numbah: u32 = rand::random();
     let gc_exe = work_path.join(&format!("rustup-gc-{:x}.exe", numbah));
 
-    use std::io;
-    use std::mem;
-    use std::os::windows::ffi::OsStrExt;
-    use std::ptr;
-    use winapi::shared::minwindef::DWORD;
-    use winapi::um::fileapi::{CreateFileW, OPEN_EXISTING};
-    use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
-    use winapi::um::minwinbase::SECURITY_ATTRIBUTES;
-    use winapi::um::winbase::FILE_FLAG_DELETE_ON_CLOSE;
-    use winapi::um::winnt::{FILE_SHARE_DELETE, FILE_SHARE_READ, GENERIC_READ};
+    // Copy rustup (probably this process's exe) to the gc exe
+    utils::copy_file(&rustup_path, &gc_exe)?;
+
+    let gc_exe_win: Vec<_> = gc_exe.as_os_str().encode_wide().chain(Some(0)).collect();
+
+    // Open an inheritable handle to the gc exe marked
+    // FILE_FLAG_DELETE_ON_CLOSE. This will be inherited
+    // by subsequent processes.
+    let mut sa = SECURITY_ATTRIBUTES {
+        nLength: mem::size_of::<SECURITY_ATTRIBUTES> as DWORD,
+        lpSecurityDescriptor: ptr::null_mut(),
+        bInheritHandle: 1,
+    };
 
     unsafe {
-        // Copy rustup (probably this process's exe) to the gc exe
-        utils::copy_file(&rustup_path, &gc_exe)?;
-
-        let mut gc_exe_win: Vec<_> = gc_exe.as_os_str().encode_wide().collect();
-        gc_exe_win.push(0);
-
-        // Open an inheritable handle to the gc exe marked
-        // FILE_FLAG_DELETE_ON_CLOSE. This will be inherited
-        // by subsequent processes.
-        let mut sa = mem::zeroed::<SECURITY_ATTRIBUTES>();
-        sa.nLength = mem::size_of::<SECURITY_ATTRIBUTES>() as DWORD;
-        sa.bInheritHandle = 1;
-
         let gc_handle = CreateFileW(
             gc_exe_win.as_ptr(),
             GENERIC_READ,
@@ -984,23 +949,21 @@ fn delete_rustup_and_cargo_home() -> Result<()> {
             return Err(err).chain_err(|| ErrorKind::WindowsUninstallMadness);
         }
 
-        let _g = scopeguard::guard(gc_handle, |h| {
-            let _ = CloseHandle(h);
-        });
-
-        Command::new(gc_exe)
-            .spawn()
-            .chain_err(|| ErrorKind::WindowsUninstallMadness)?;
-
-        // The catch 22 article says we must sleep here to give
-        // Windows a chance to bump the processes file reference
-        // count. acrichto though is in disbelief and *demanded* that
-        // we not insert a sleep. If Windows failed to uninstall
-        // correctly it is because of him.
-
-        // (.. and months later acrichto owes me a beer).
-        thread::sleep(Duration::from_millis(100));
+        CloseHandle(gc_handle);
     }
+
+    Command::new(gc_exe)
+        .spawn()
+        .chain_err(|| ErrorKind::WindowsUninstallMadness)?;
+
+    // The catch 22 article says we must sleep here to give
+    // Windows a chance to bump the processes file reference
+    // count. acrichto though is in disbelief and *demanded* that
+    // we not insert a sleep. If Windows failed to uninstall
+    // correctly it is because of him.
+
+    // (.. and months later acrichto owes me a beer).
+    thread::sleep(Duration::from_millis(100));
 
     Ok(())
 }
@@ -1107,11 +1070,6 @@ fn wait_for_parent() -> Result<()> {
     Ok(())
 }
 
-#[cfg(unix)]
-pub fn complete_windows_uninstall() -> Result<()> {
-    panic!("stop doing that")
-}
-
 #[derive(PartialEq)]
 enum PathUpdateMethod {
     RcFile(PathBuf),
@@ -1125,30 +1083,31 @@ fn get_add_path_methods() -> Vec<PathUpdateMethod> {
         return vec![PathUpdateMethod::Windows];
     }
 
-    let profile = utils::home_dir().map(|p| p.join(".profile"));
+    let home_dir = utils::home_dir().unwrap();
+
+    let profile = home_dir.join(".profile");
     let mut profiles = vec![profile];
 
     if let Ok(shell) = env::var("SHELL") {
         if shell.contains("zsh") {
-            let zdotdir = env::var("ZDOTDIR")
-                .ok()
-                .map(PathBuf::from)
-                .or_else(utils::home_dir);
-            let zprofile = zdotdir.map(|p| p.join(".zprofile"));
+            let var = env::var_os("ZDOTDIR");
+            let zprofile = var
+                .as_deref()
+                .map(Path::new)
+                .unwrap_or_else(|| home_dir.as_path())
+                .join(".zprofile");
             profiles.push(zprofile);
         }
     }
 
-    if let Some(bash_profile) = utils::home_dir().map(|p| p.join(".bash_profile")) {
-        // Only update .bash_profile if it exists because creating .bash_profile
-        // will cause .profile to not be read
-        if bash_profile.exists() {
-            profiles.push(Some(bash_profile));
-        }
+    let bash_profile = home_dir.join(".bash_profile");
+    // Only update .bash_profile if it exists because creating .bash_profile
+    // will cause .profile to not be read
+    if bash_profile.exists() {
+        profiles.push(bash_profile);
     }
 
-    let rcfiles = profiles.into_iter().filter_map(|f| f);
-    rcfiles.map(PathUpdateMethod::RcFile).collect()
+    profiles.into_iter().map(PathUpdateMethod::RcFile).collect()
 }
 
 fn shell_export_string() -> Result<String> {
@@ -1202,10 +1161,7 @@ fn do_add_to_path(methods: &[PathUpdateMethod]) -> Result<()> {
         return Ok(());
     };
 
-    let mut new_path = utils::cargo_home()?
-        .join("bin")
-        .to_string_lossy()
-        .to_string();
+    let mut new_path = utils::cargo_home()?.join("bin").display().to_string();
     if old_path.contains(&new_path) {
         return Ok(());
     }
@@ -1246,7 +1202,7 @@ fn do_add_to_path(methods: &[PathUpdateMethod]) -> Result<()> {
 }
 
 // Get the windows PATH variable out of the registry as a String. If
-// this returns None then the PATH variable is not unicode and we
+// this returns None then the PATH variable is not Unicode and we
 // should not mess with it.
 #[cfg(windows)]
 fn get_windows_path_var() -> Result<Option<String>> {
@@ -1317,10 +1273,7 @@ fn do_remove_from_path(methods: &[PathUpdateMethod]) -> Result<()> {
         return Ok(());
     };
 
-    let path_str = utils::cargo_home()?
-        .join("bin")
-        .to_string_lossy()
-        .to_string();
+    let path_str = utils::cargo_home()?.join("bin").display().to_string();
     let idx = if let Some(i) = old_path.find(&path_str) {
         i
     } else {
@@ -1511,7 +1464,8 @@ pub fn prepare_update() -> Result<Option<PathBuf>> {
         build_triple
     };
 
-    let update_root = env::var("RUSTUP_UPDATE_ROOT").unwrap_or_else(|_| String::from(UPDATE_ROOT));
+    let update_root = env::var("RUSTUP_UPDATE_ROOT").ok();
+    let update_root = update_root.as_deref().unwrap_or(UPDATE_ROOT);
 
     let tempdir = tempfile::Builder::new()
         .prefix("rustup-update")

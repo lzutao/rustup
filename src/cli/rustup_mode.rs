@@ -14,7 +14,6 @@ use rustup::{command, Cfg, Toolchain};
 use std::error::Error;
 use std::fmt;
 use std::io::Write;
-use std::iter;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 use std::str::FromStr;
@@ -1041,7 +1040,7 @@ fn show(cfg: &Cfg) -> Result<()> {
     fn print_header(t: &mut term::StdoutTerminal, s: &str) -> Result<()> {
         t.attr(term2::Attr::Bold)?;
         writeln!(t, "{}", s)?;
-        writeln!(t, "{}", iter::repeat("-").take(s.len()).collect::<String>())?;
+        writeln!(t, "{}", "-".repeat(s.len()))?;
         writeln!(t)?;
         t.reset()?;
         Ok(())
