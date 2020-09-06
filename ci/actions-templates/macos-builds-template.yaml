@@ -66,13 +66,13 @@ jobs:
           sh ./rustup-init.sh --default-toolchain=none --profile=minimal -y
       - name: Ensure Stable is up to date
         run: |
-          if rustc +stable -vV >/dev/null 2>/dev/null; then
-            rustup toolchain uninstall stable
-          fi
-          rustup toolchain install --profile=minimal stable
+          rustup default stable
+          rustup update stable
       - name: Ensure we have our goal target installed
         run: |
           rustup target install "$TARGET"
+      - run: bash ci/disable_LTO.bash
+        if: github.ref != 'refs/heads/stable'
       - name: Run a full build and test
         run: bash ci/run.bash
       - name: Acquire the AWS tooling

@@ -25,42 +25,10 @@ jobs:
       matrix:
         target:
           - x86_64-unknown-linux-gnu
-          - armv7-unknown-linux-gnueabihf
-          - aarch64-linux-android
-          - aarch64-unknown-linux-gnu     # skip-pr
-          - powerpc64-unknown-linux-gnu   # skip-pr
-          - x86_64-unknown-linux-musl     # skip-pr
-          - i686-unknown-linux-gnu        # skip-pr skip-master
-          - arm-unknown-linux-gnueabi     # skip-pr skip-master
-          - arm-unknown-linux-gnueabihf   # skip-pr skip-master
-          - x86_64-unknown-freebsd        # skip-pr skip-master
-          - x86_64-unknown-netbsd         # skip-pr skip-master
-          - powerpc-unknown-linux-gnu     # skip-pr skip-master
-          - powerpc64le-unknown-linux-gnu # skip-pr skip-master
-          - mips-unknown-linux-gnu        # skip-pr skip-master
-          - mips64-unknown-linux-gnuabi64 # skip-pr skip-master
-          - mipsel-unknown-linux-gnu      # skip-pr skip-master
-          - mips64el-unknown-linux-gnuabi64 # skip-pr skip-master
-          - s390x-unknown-linux-gnu       # skip-pr skip-master
-          - arm-linux-androideabi         # skip-pr skip-master
-          - armv7-linux-androideabi       # skip-pr skip-master
-          - i686-linux-android            # skip-pr skip-master
-          - x86_64-linux-android          # skip-pr skip-master
-          - riscv64gc-unknown-linux-gnu   # skip-pr skip-master
         include:
           - target: x86_64-unknown-linux-gnu
             run_tests: YES
             snap_arch: amd64
-          - target: i686-unknown-linux-gnu # skip-pr skip-master
-            snap_arch: i386  # skip-pr skip-master
-          - target: aarch64-unknown-linux-gnu # skip-pr
-            snap_arch: arm64 # skip-pr
-          - target: armv7-unknown-linux-gnueabihf
-            snap_arch: armhf
-          - target: powerpc64le-unknown-linux-gnu # skip-pr skip-master
-            snap_arch: ppc64el # skip-pr skip-master
-          - target: s390x-unknown-linux-gnu # skip-pr skip-master
-            snap_arch: s390x # skip-pr skip-master
     steps:
       - uses: actions/checkout@v2
         with:
@@ -109,10 +77,8 @@ jobs:
           sh ./rustup-init.sh --default-toolchain=none --profile=minimal -y
       - name: Ensure Stable is up to date
         run: |
-          if rustc +stable -vV >/dev/null 2>/dev/null; then
-            rustup toolchain uninstall stable
-          fi
-          rustup toolchain install --profile=minimal stable
+          rustup default stable
+          rustup update stable
       - name: Ensure we have our goal target installed
         run: |
           rustup target install "$TARGET"
@@ -125,6 +91,8 @@ jobs:
           echo "::set-env name=DOCKER::$DOCKER"
       - name: Fetch the docker
         run: bash ci/fetch-rust-docker.bash "${TARGET}"
+      - run: bash ci/disable_LTO.bash
+        if: github.ref != 'refs/heads/stable'
       - name: Maybe build a docker from there
         run: |
           if [ -f "ci/docker/$DOCKER/Dockerfile" ]; then
