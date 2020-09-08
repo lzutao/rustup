@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["cargo_home_str",""],["enumerate_shells",""],["get_available_shells",""],["legacy_paths",""]],"struct":[["Bash",""],["Posix",""],["ShellScript",""],["Zsh",""]],"trait":[["UnixShell",""]],"type":[["Shell",""]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["VecArgs","Helper for ArgSource over `Vec<String>`"]],"trait":[["ArgSource",""]]});

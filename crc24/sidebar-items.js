@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["hash_raw","Computes hash of the raw bytes using CRC-24 (without including the length as part of the data)"]],"struct":[["Crc24Hasher","CRC-24 hasher based on IETF RFC2440 specification."]]});

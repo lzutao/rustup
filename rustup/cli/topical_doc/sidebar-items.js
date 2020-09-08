@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["dir_into_vec",""],["index_html",""],["local_path",""],["no_document",""],["search_path",""]],"struct":[["DocData",""]]});

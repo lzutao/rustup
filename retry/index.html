@@ -1,0 +1,105 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `retry` crate."><meta name="keywords" content="rust, rustlang, rust-lang, retry"><title>retry - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../ayu.css" disabled ><script src="../storage.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="shortcut icon" href="../favicon.ico"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../retry/index.html'><div class='logo-container rust-logo'><img src='../rust-logo.png' alt='logo'></div></a><p class='location'>Crate retry</p><div class='block version'><p>Version 1.1.0</p></div><div class="sidebar-elems"><a id='all-types' href='all.html'><p>See all retry's items</p></a><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#enums">Enums</a></li><li><a href="#functions">Functions</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'retry', ty: 'mod', relpath: '../'};</script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><span class="help-button">?</span>
+                <a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/retry/lib.rs.html#1-390' title='goto source code'>[src]</a></span><span class='in-band'>Crate <a class="mod" href=''>retry</a></span></h1><div class='docblock'><p>Crate <code>retry</code> provides utilities for retrying operations that can fail.</p>
+<h1 id="usage" class="section-header"><a href="#usage">Usage</a></h1>
+<p>Retry an operation using the <code>retry</code> function. <code>retry</code> accepts an iterator over <code>Duration</code>s and
+a closure that returns a <code>Result</code> (or <code>OperationResult</code>; see below). The iterator is used to
+determine how long to wait after each unsuccessful try and how many times to try before giving
+up and returning <code>Result::Err</code>. The closure determines either the final successful value, or
+an error value, which can either be returned immediately or used to indicate that the
+operation should be retried.</p>
+<p>Any type that implements <code>Iterator&lt;Item = Duration&gt;</code> can be used to determine retry behavior,
+though a few useful implementations are provided in the <code>delay</code> module, including a fixed delay
+and exponential back-off.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">collection</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>].<span class="ident">into_iter</span>();
+
+<span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">retry</span>(<span class="ident">Fixed</span>::<span class="ident">from_millis</span>(<span class="number">100</span>), <span class="op">|</span><span class="op">|</span> {
+    <span class="kw">match</span> <span class="ident">collection</span>.<span class="ident">next</span>() {
+        <span class="prelude-val">Some</span>(<span class="ident">n</span>) <span class="kw">if</span> <span class="ident">n</span> <span class="op">=</span><span class="op">=</span> <span class="number">3</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="string">&quot;n is 3!&quot;</span>),
+        <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="string">&quot;n must be 3!&quot;</span>),
+        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="string">&quot;n was never 3!&quot;</span>),
+    }
+});
+
+<span class="macro">assert</span><span class="macro">!</span>(<span class="ident">result</span>.<span class="ident">is_ok</span>());</pre></div>
+<p>The <code>Iterator</code> API can be used to limit or modify the delay strategy. For example, to limit the
+number of retries to 1:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">collection</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>].<span class="ident">into_iter</span>();
+
+<span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">retry</span>(<span class="ident">Fixed</span>::<span class="ident">from_millis</span>(<span class="number">100</span>).<span class="ident">take</span>(<span class="number">1</span>), <span class="op">|</span><span class="op">|</span> {
+    <span class="kw">match</span> <span class="ident">collection</span>.<span class="ident">next</span>() {
+        <span class="prelude-val">Some</span>(<span class="ident">n</span>) <span class="kw">if</span> <span class="ident">n</span> <span class="op">=</span><span class="op">=</span> <span class="number">3</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="string">&quot;n is 3!&quot;</span>),
+        <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="string">&quot;n must be 3!&quot;</span>),
+        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="string">&quot;n was never 3!&quot;</span>),
+    }
+});
+
+<span class="macro">assert</span><span class="macro">!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());</pre></div>
+<p>To apply random jitter to any delay strategy, the <code>jitter</code> function can be used in combination
+with the <code>Iterator</code> API:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">collection</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>].<span class="ident">into_iter</span>();
+
+<span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">retry</span>(<span class="ident">Exponential</span>::<span class="ident">from_millis</span>(<span class="number">10</span>).<span class="ident">map</span>(<span class="ident">jitter</span>).<span class="ident">take</span>(<span class="number">3</span>), <span class="op">|</span><span class="op">|</span> {
+    <span class="kw">match</span> <span class="ident">collection</span>.<span class="ident">next</span>() {
+        <span class="prelude-val">Some</span>(<span class="ident">n</span>) <span class="kw">if</span> <span class="ident">n</span> <span class="op">=</span><span class="op">=</span> <span class="number">3</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="string">&quot;n is 3!&quot;</span>),
+        <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="string">&quot;n must be 3!&quot;</span>),
+        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="string">&quot;n was never 3!&quot;</span>),
+    }
+});
+
+<span class="macro">assert</span><span class="macro">!</span>(<span class="ident">result</span>.<span class="ident">is_ok</span>());</pre></div>
+<p>To deal with fatal errors, return <code>retry::OperationResult</code>, which is like std's <code>Result</code>, but
+with a third case to distinguish between errors that should cause a retry and errors that
+should immediately return, halting retry behavior. (Internally, <code>OperationResult</code> is always
+used, and closures passed to <code>retry</code> that return plain <code>Result</code> are converted into
+<code>OperationResult</code>.)</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">retry</span>::<span class="ident">OperationResult</span>;
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">collection</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="number">2</span>].<span class="ident">into_iter</span>();
+<span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">retry</span>(<span class="ident">Fixed</span>::<span class="ident">from_millis</span>(<span class="number">1</span>), <span class="op">|</span><span class="op">|</span> {
+    <span class="kw">match</span> <span class="ident">collection</span>.<span class="ident">next</span>() {
+        <span class="prelude-val">Some</span>(<span class="ident">n</span>) <span class="kw">if</span> <span class="ident">n</span> <span class="op">=</span><span class="op">=</span> <span class="number">2</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">OperationResult</span>::<span class="prelude-val">Ok</span>(<span class="ident">n</span>),
+        <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">OperationResult</span>::<span class="ident">Retry</span>(<span class="string">&quot;not 2&quot;</span>),
+        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">OperationResult</span>::<span class="prelude-val">Err</span>(<span class="string">&quot;not found&quot;</span>),
+    }
+}).<span class="ident">unwrap</span>();
+
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">value</span>, <span class="number">2</span>);</pre></div>
+<p>If your operation needs to know how many times it's been tried, use the <code>retry_with_index</code>
+function. This works the same as <code>retry</code>, but passes the number of the current try to the
+closure as an argument.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">collection</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>].<span class="ident">into_iter</span>();
+
+<span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">retry_with_index</span>(<span class="ident">Fixed</span>::<span class="ident">from_millis</span>(<span class="number">100</span>), <span class="op">|</span><span class="ident">current_try</span><span class="op">|</span> {
+    <span class="kw">if</span> <span class="ident">current_try</span> <span class="op">&gt;</span> <span class="number">3</span> {
+        <span class="kw">return</span> <span class="ident">OperationResult</span>::<span class="prelude-val">Err</span>(<span class="string">&quot;did not succeed within 3 tries&quot;</span>);
+    }
+
+    <span class="kw">match</span> <span class="ident">collection</span>.<span class="ident">next</span>() {
+        <span class="prelude-val">Some</span>(<span class="ident">n</span>) <span class="kw">if</span> <span class="ident">n</span> <span class="op">=</span><span class="op">=</span> <span class="number">5</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">OperationResult</span>::<span class="prelude-val">Ok</span>(<span class="string">&quot;n is 5!&quot;</span>),
+        <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">OperationResult</span>::<span class="ident">Retry</span>(<span class="string">&quot;n must be 5!&quot;</span>),
+        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">OperationResult</span>::<span class="ident">Retry</span>(<span class="string">&quot;n was never 5!&quot;</span>),
+    }
+});
+
+<span class="macro">assert</span><span class="macro">!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());</pre></div>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table><tr class='module-item'><td><a class="mod" href="delay/index.html" title='retry::delay mod'>delay</a></td><td class='docblock-short'><p>Different types of delay for retryable operations.</p>
+</td></tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table><tr class='module-item'><td><a class="enum" href="enum.Error.html" title='retry::Error enum'>Error</a></td><td class='docblock-short'><p>An error with a retryable operation.</p>
+</td></tr><tr class='module-item'><td><a class="enum" href="enum.OperationResult.html" title='retry::OperationResult enum'>OperationResult</a></td><td class='docblock-short'><p>A result that represents either success, retryable failure, or immediately-returning failure.</p>
+</td></tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table><tr class='module-item'><td><a class="fn" href="fn.retry.html" title='retry::retry fn'>retry</a></td><td class='docblock-short'><p>Retry the given operation synchronously until it succeeds, or until the given <code>Duration</code>
+iterator ends.</p>
+</td></tr><tr class='module-item'><td><a class="fn" href="fn.retry_with_index.html" title='retry::retry_with_index fn'>retry_with_index</a></td><td class='docblock-short'><p>Retry the given operation synchronously until it succeeds, or until the given <code>Duration</code>
+iterator ends, with each iteration of the operation receiving the number of the attempt as an
+argument.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../";window.currentCrate = "retry";</script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>

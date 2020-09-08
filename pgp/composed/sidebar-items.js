@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["key","Internal key definitions"],["message",""],["signed_key","Signed Secret and Public Key"]],"struct":[["SignatureParser",""],["StandaloneSignature","Standalone signature as defined by the cleartext framework."]],"trait":[["Deserializable",""]]});

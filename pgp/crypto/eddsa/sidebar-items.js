@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["generate_key","Generate an EdDSA KeyPair."],["sign","Sign using RSA, with PKCS1v15 padding."],["verify","Verify an EdDSA signature."]]});

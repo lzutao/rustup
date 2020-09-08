@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["LineBreak",""]],"struct":[["LineWriter","A `Write` implementation that splits any written bytes into the given length lines."]]});

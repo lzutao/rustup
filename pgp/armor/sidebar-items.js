@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["BlockType","Armor block types."],["PKCS1Type","OpenSSL PKCS#1 PEM armor types"]],"fn":[["write",""]],"struct":[["Dearmor","Streaming based ascii armor parsing."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["RevocationCode","Codes for revocation reasons"],["SignatureType",""],["SignatureVersion",""],["Subpacket",""],["SubpacketType","Available signature subpacket types"]],"struct":[["KeyFlags",""],["Notation",""],["Signature","Signature Packet https://tools.ietf.org/html/rfc4880.html#section-5.2"]]});

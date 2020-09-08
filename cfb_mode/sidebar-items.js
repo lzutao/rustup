@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Cfb","CFB self-synchronizing stream cipher instance."]]});

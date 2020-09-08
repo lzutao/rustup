@@ -1,0 +1,9 @@
+(function() {var implementors = {};
+implementors["curve25519_dalek"] = [{"text":"impl Zeroize for Scalar","synthetic":false,"types":[]},{"text":"impl Zeroize for MontgomeryPoint","synthetic":false,"types":[]}];
+implementors["ed25519_dalek"] = [{"text":"impl Zeroize for SecretKey","synthetic":false,"types":[]},{"text":"impl Zeroize for ExpandedSecretKey","synthetic":false,"types":[]}];
+implementors["num_bigint_dig"] = [{"text":"impl Zeroize for Sign","synthetic":false,"types":[]},{"text":"impl Zeroize for BigInt","synthetic":false,"types":[]},{"text":"impl Zeroize for BigUint","synthetic":false,"types":[]}];
+implementors["pgp"] = [{"text":"impl Zeroize for SecretKey","synthetic":false,"types":[]},{"text":"impl Zeroize for SecretSubkey","synthetic":false,"types":[]},{"text":"impl Zeroize for Mpi","synthetic":false,"types":[]},{"text":"impl Zeroize for PlainSecretParams","synthetic":false,"types":[]},{"text":"impl Zeroize for SecretParams","synthetic":false,"types":[]},{"text":"impl Zeroize for ECDHSecretKey","synthetic":false,"types":[]},{"text":"impl Zeroize for EdDSASecretKey","synthetic":false,"types":[]},{"text":"impl Zeroize for DSASecretKey","synthetic":false,"types":[]}];
+implementors["rsa"] = [{"text":"impl Zeroize for RSAPrivateKey","synthetic":false,"types":[]}];
+implementors["x25519_dalek"] = [{"text":"impl Zeroize for EphemeralSecret","synthetic":false,"types":[]},{"text":"impl Zeroize for StaticSecret","synthetic":false,"types":[]},{"text":"impl Zeroize for SharedSecret","synthetic":false,"types":[]}];
+implementors["zeroize"] = [];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

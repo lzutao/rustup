@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Edata","Encrypted Data Symmetrically Encrypted Data Packet | Symmetrically Encrypted Integrity Protected Data Packet"],["Esk","Encrypted Session Key"],["Message","An OpenPGP message"]]});

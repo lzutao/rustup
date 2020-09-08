@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Base64Reader","Reads base64 values from a given byte input, stops once it detects the first non base64 char."]]});

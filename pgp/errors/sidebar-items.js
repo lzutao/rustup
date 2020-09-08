@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["MPI_TOO_LONG",""]],"enum":[["Error","Error types"]],"type":[["Result",""]]});

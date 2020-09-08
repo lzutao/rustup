@@ -1,0 +1,57 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `git_testament_macros` macro in crate `git_testament`."><meta name="keywords" content="rust, rustlang, rust-lang, git_testament_macros"><title>git_testament::git_testament_macros - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../ayu.css" disabled ><script src="../storage.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="shortcut icon" href="../favicon.ico"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc macro"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../git_testament/index.html'><div class='logo-container rust-logo'><img src='../rust-logo.png' alt='logo'></div></a><div class="sidebar-elems"><p class='location'><a href='index.html'>git_testament</a></p><script>window.sidebarCurrent = {name: 'git_testament_macros', ty: 'macro', relpath: ''};</script><script defer src="sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><span class="help-button">?</span>
+                <a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/git_testament_derive/lib.rs.html#501-573' title='goto source code'>[src]</a></span><span class='in-band'>Macro <a href='index.html'>git_testament</a>::<wbr><a class="macro" href=''>git_testament_macros</a></span></h1><pre class='rust macro'>git_testament_macros!() { /* proc-macro */ }</pre><div class='docblock'><p>Generate a testament for the working tree as a set of static string macros.</p>
+<p>This macro declares a set of macros which provide you with your testament
+as static strings.</p>
+<p>The intention is that the macro should be used at the top level of a binary
+crate to provide information about the state of the codebase that the output
+program was built from.  This includes a number of things such as the commit
+SHA, any related tag, how many commits since the tag, the date of the commit,
+and if there are any &quot;dirty&quot; parts to the working tree such as modified files,
+uncommitted files, etc.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="comment">// Bring the procedural macro into scope</span>
+<span class="kw">use</span> <span class="ident">git_testament</span>::<span class="ident">git_testament_macros</span>;
+
+<span class="comment">// Declare a testament, it&#39;ll end up as pile of macros, so you can</span>
+<span class="comment">// give it whatever ident-like name you want.  The name will prefix the</span>
+<span class="comment">// macro names.  Also you can optionally specify</span>
+<span class="comment">// a branch name which will be considered the &quot;trusted&quot; branch like in</span>
+<span class="comment">// `git_testament::render_testament!()`</span>
+<span class="macro">git_testament_macros</span><span class="macro">!</span>(<span class="ident">version</span>);
+
+<span class="comment">// ... later, you can display the testament.</span>
+<span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;app version {}&quot;</span>, <span class="macro">version_testament</span><span class="macro">!</span>());</pre></div>
+<p>The macros all resolve to string literals, boolean literals, or in the case
+of <code>NAME_tag_distance!()</code> a number.  This is most valuable when you are
+wanting to include the information into a compile-time-constructed string</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="comment">// Bring the procedural macro into scope</span>
+<span class="kw">use</span> <span class="ident">git_testament</span>::<span class="ident">git_testament_macros</span>;
+
+<span class="comment">// Declare a testament, it&#39;ll end up as pile of macros, so you can</span>
+<span class="comment">// give it whatever ident-like name you want.  The name will prefix the</span>
+<span class="comment">// macro names.  Also you can optionally specify</span>
+<span class="comment">// a branch name which will be considered the &quot;trusted&quot; branch like in</span>
+<span class="comment">// `git_testament::render_testament!()`</span>
+<span class="macro">git_testament_macros</span><span class="macro">!</span>(<span class="ident">version</span>, <span class="string">&quot;stable&quot;</span>);
+
+<span class="kw">const</span> <span class="ident">APP_VERSION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="macro">concat</span><span class="macro">!</span>(<span class="string">&quot;app version &quot;</span>, <span class="macro">version_testament</span><span class="macro">!</span>());
+
+<span class="comment">// ... later, you can display the testament.</span>
+<span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">APP_VERSION</span>);</pre></div>
+<p>The set of macros defined is:</p>
+<ul>
+<li><code>NAME_testament!()</code> -&gt; produces a string similar but not guaranteed to be
+identical to the result of <code>Display</code> formatting a normal testament.</li>
+<li><code>NAME_branch!()</code> -&gt; An Option&lt;&amp;str&gt; of the current branch name</li>
+<li><code>NAME_repo_present!()</code> -&gt; A boolean indicating if there is a repo at all</li>
+<li><code>NAME_commit_present!()</code> -&gt; A boolean indicating if there is a commit present at all</li>
+<li><code>NAME_tag_present!()</code> -&gt; A boolean indicating if there is a tag present</li>
+<li><code>NAME_commit_hash!()</code> -&gt; A string of the commit hash (or crate version if commit not present)</li>
+<li><code>NAME_commit_date!()</code> -&gt; A string of the commit date (or build date if no commit present)</li>
+<li><code>NAME_tag_name!()</code> -&gt; The tag name if present (or crate version if commit not present)</li>
+<li><code>NAME_tag_distance!()</code> -&gt; The number of commits since the tag if present (zero otherwise)</li>
+</ul>
+</div></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../";window.currentCrate = "git_testament";</script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>

@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["UNIX_FALLBACK_SETTINGS",""]],"enum":[["OverrideReason",""],["PgpPublicKey",""]],"struct":[["BUILTIN_PGP_KEY",""],["Cfg",""],["OverrideCfg",""],["OverrideFile",""],["ToolchainSection",""]]});

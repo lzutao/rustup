@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["nom"] = [{"text":"impl Copy for Needed","synthetic":false,"types":[]},{"text":"impl Copy for Endianness","synthetic":false,"types":[]},{"text":"impl&lt;'a&gt; Copy for CompleteStr&lt;'a&gt;","synthetic":false,"types":[]},{"text":"impl&lt;'a&gt; Copy for CompleteByteSlice&lt;'a&gt;","synthetic":false,"types":[]},{"text":"impl&lt;T:&nbsp;Copy&gt; Copy for Input&lt;T&gt;","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

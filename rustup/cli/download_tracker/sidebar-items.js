@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["DOWNLOAD_TRACK_COUNT","Keep track of this many past download amounts"]],"fn":[["format_dhms",""]],"struct":[["Display","Human readable representation of a `Duration`."],["DownloadTracker","Tracks download progress and displays information about it to a terminal."]],"trait":[["DurationDisplay",""]]});

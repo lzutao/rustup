@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["nom"] = [{"text":"impl&lt;I, E&gt; Display for Err&lt;I, E&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;I: Debug,<br>&nbsp;&nbsp;&nbsp;&nbsp;E: Debug,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;'a&gt; Display for CompleteStr&lt;'a&gt;","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

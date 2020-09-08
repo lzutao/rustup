@@ -1,0 +1,1 @@
+initSidebarItems({"macro":[["git_testament","Generate a testament for the working tree."],["git_testament_macros","Generate a testament for the working tree as a set of static string macros."]]});

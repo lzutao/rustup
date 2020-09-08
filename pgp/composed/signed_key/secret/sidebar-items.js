@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["SignedSecretKey","Represents a secret signed PGP key."],["SignedSecretKeyParser","Parse a transferable keys from the given packets. Ref: https://tools.ietf.org/html/rfc4880.html#section-11.1"],["SignedSecretSubKey","Represents a composed secret PGP SubKey."]]});

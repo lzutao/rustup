@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["isatty",""],["stderr_isatty",""],["stdout_isatty",""]]});

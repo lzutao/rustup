@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["InstallMethod",""]],"fn":[["uninstall",""]]});

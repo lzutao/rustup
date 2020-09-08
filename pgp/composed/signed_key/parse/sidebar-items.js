@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["from_armor_many","Parses a list of secret and public keys from ascii armored text."],["from_bytes_many","Parses a list of secret and public keys from raw bytes."]],"struct":[["PubPrivIterator",""]]});

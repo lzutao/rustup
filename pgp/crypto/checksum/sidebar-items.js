@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["calculate_sha1","SHA1 checksum, first 20 octets."],["calculate_simple",""],["simple","Two octet checksum: sum of all octets mod 65535."],["simple_to_writer",""]],"struct":[["SimpleChecksum",""]]});

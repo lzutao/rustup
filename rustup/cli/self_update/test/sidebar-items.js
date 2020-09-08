@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["get_path",""],["restore_path",""],["with_saved_path","Support testing of code that mutates global path state"]]});

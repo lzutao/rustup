@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["PublicParams","Represent the public paramaters for the different algorithms."]]});

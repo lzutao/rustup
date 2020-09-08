@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Normalized","This struct wraps a `std::io::Chars` to normalize line endings."]]});
